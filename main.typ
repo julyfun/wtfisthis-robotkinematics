@@ -134,17 +134,37 @@
 
 #components.adaptive-columns(outline(title: none, indent: 1em, depth: 2))
 
-= Transforms
+= 位姿空间
 
-== Do you understand?
+== 自由度
 
-- 2 维空间的方向（单位向量）有几个自由度？
-- 3 维空间的方向有几个自由度？
-- 3 维空间中的坐标系变换有几个自由度？
-  - 平移
-  - 旋转：注意区分坐标系旋转和向量的旋转
+=== 刚体自由度
 
-== Do you really understand?
+- 硬币有几个自由度？
+- #pause 圆心有 3 个自由度，它还可以建立坐标系，可以绕 3 个轴旋转，因此一共是 6 个自由度.
+- 从约束的角度看，硬币上取 3 个点，第一个点有 3 个自由度，第二个点与前者有距离约束，因此是 2 个自由度。第三个点有两个距离约束，因此是 1 个自由度.
+- 同理 N 维空间坐标系有 $(N(N - 1)) / 2$ 自由度
+
+== 机器人自由度
+
+#grid(
+  columns: 4,
+  gutter: 2pt,
+  im(11, h: 35%),
+  im(12, h: 40%),
+  im(13, h: 40%),
+  im(14, h: 40%),
+)
+ 
+机器人关节主要有旋转关节 R，移动关节 P，都只有一个自由度. 稍微不常见的有螺旋关节 H，类似螺丝钉。万向节 U 两个自由度，球铰 S 三个自由度.
+
+=== 工作空间和任务空间
+
+任务空间与机器人无关，例如钢笔作画就是 $RR^2$.
+
+工作空间是末端机器人可达的位姿空间。描述关节或末端位姿需要人为定义基坐标系和关节坐标系，然后用变换矩阵描述两个坐标系之间的关系.
+
+== 变换的几何意义
 
 坐标系 ${B}$ 到坐标系 ${A}$ 的变换如下： 
 
@@ -156,19 +176,21 @@ $R = mat(
 
 #pause
 
-- 意义：如果某个向量在 {A} 坐标系中是 $p_A = vec(x, y, z)$，那么在 {B} 坐标系中是 $p_B = R vec(x, y, z) + t$. 即 $R, t$ 描述了向量从 A 坐标系变换到 B 坐标系的变换方式。注意是先旋转后平移。
+- 含义：如果某个向量在 {A} 坐标系中是 $p_A = vec(x, y, z)$，那么在 {B} 坐标系中是 $p_B = R vec(x, y, z) + t$. 即 $R, t$ 描述了向量从 A 坐标系变换到 B 坐标系的变换方式.
 
-- 行业约定：对于 $A$ 到 $B$ 的变换，通常称 $B$ 为父坐标系 (目标 / target / parent), $A$ 为子坐标系（源 / source /child). 
-可将 $R, t$ 表示到一个矩阵内，即变换 $T_A^B = mat(R, t; 0, 1), p_B = T_A^B p_A$. 所有的三维旋转构成 $"SO"(3)$ 群，所有三维变换构成 $"SE"(3)$ 群.
+- 称呼约定：对于 $A$ 到 $B$ 的变换，ROS2 等库会称 $B$ 为父坐标系 (目标 / target / parent), $A$ 为子坐标系（源 / source /child). 
+可将 $R, t$ 表示到一个矩阵内，即变换 $T_A^B = mat(R, t; 0, 1)$，则 $p_B = T_A^B p_A$. 所有的三维旋转构成的群称为 $"SO"(3)$，加上平移的三维变换构成 $"SE"(3)$.
 
-== 以下说法等价
+== 变换的几何意义
+
+=== 以下说法等价
 
 + $T = mat(R, t; 0, 1)$ 为坐标系 A 到坐标系 B 的变换. (A to B)
-+ 某点在 A 下的坐标为 $p$, B 下坐标为 $T p$，
++ 某点在 A 下的坐标为 $p$, B 下坐标为 $T p$， (A to B)
 + A 的原点在 B 下的坐标为 $t$, A 的三个轴在 B 下的表示为 R 的三列向量. (A in B)
 
 === 注意
-- $T_A^C = T_B^C T_A^B$ （左乘）
+- $T_A^C = T_B^C T_A^B$ （左乘. 这里 $T_A^B$ 表示从 A 到 B，也可以写成 $T_"BA"$）
 
 === 例子 1
 
@@ -178,7 +200,7 @@ Answer: $2 -> "base" -> 1$. 即 $T_2^1 = T_1^(-1) T_2$
 
 === 例子 2
 
-#im(3, h: 40%)
+#im(3, h: 33%)
 
 根据上图，写出 b 到 a 的变换. 思路："b to a" is "b in a"。因此矩阵第一列就是 b 的 x 轴在 a 下的表示. 矩阵第四列就是 b 的原点在 a 下的表示.
 
@@ -195,7 +217,7 @@ $
 
 == 1. 旋转矩阵 3x3
 
-坐标系 A 到坐标系 B 的旋转如下表示： 
+例：坐标系 A 到坐标系 B 的旋转如下表示： 
 
 $R_A^B = mat(
   0.96, -0.259, 0.108;
@@ -208,18 +230,17 @@ $R_A^B = mat(
   columns: 2,
   im(2, h: 70%),
   text[
-    - 性质：正交矩阵. 每行和每列的都是单位向量. $R R^T = bold(I); R^T = R^(-1)$
+    - 性质：正交矩阵. 每行每列都是单位向量. $R R^T = bold(I); R^T = R^(-1)$. 行列式 = 1. （行列式 = -1 则为左手坐标系）
     - R 的第一列就是 $x_A$ 在 $B$ 下的表示.
     - R 的第二列就是 $y_A$ 在 $B$ 下的表示.
     - R 的第三列就是 $z_A$ 在 $B$ 下的表示.
     - R 的第一行就是 $x_B$ 在 $A$ 下的表示, etc.
-    - 优点：最通用。根据这个性质可以看建模图直接手写旋转矩阵.
+    - 优点：最通用。根据这个性质可以看建模图手写旋转矩阵.
     - 缺点：高冗余，不适合存储和作为 loss.
-    - 注意旋转都是只有 3 个自由度的.
   ]
 )
 
-== 2. 欧拉角
+== 2. 欧拉角 Euler Angles
 
 #grid(
   columns: 2,
@@ -230,9 +251,9 @@ $R_A^B = mat(
 
 如上所示。用绕自身三轴的分别旋转某个角度。用这三个角表示整个旋转, e.g. 先后绕 xyz 轴旋转 $(45 degree, 60 degree, 45 degree)$.
 
-一般绕朝前轴的转角成为 roll-滚动，绕竖直轴为 yaw-偏航，绕左右轴为 pitch-俯仰.
+一般绕朝前轴的转角成为 roll 滚动，绕竖直轴为 yaw 偏航，绕左右轴为 pitch 俯仰.
 
-- 优点：对于简单旋转而言，几何上直观 https://quaternions.online
+- 优点：对于简单旋转而言，几何上直观
 - 缺点：有万向锁; 对于三轴旋转是最不直观的表示法; 欧拉角表示方法超过 12 种.
 - 常用于表示单轴旋转，例如 Flexiv Elements 的 TCP 设置 UI.
 
@@ -246,33 +267,34 @@ $
 
 === 万向锁
 
-旋转第二个轴时如果转了 $plus.minus 90$ 度，则第一个轴和第三个轴重合. 例如 ZYX 中若 Y 轴转了 90 度，则 X - Z 是定值则的任意组合都是同一旋转。导致：
+旋转第二个轴时如果转了 $plus.minus 90$ 度，则第一个轴和第三个轴共线. 如 ZYX 中若 Y 轴转了 90 度，则 $X - Z$ 是定值的任意组合都是同一旋转。导致：
 - 万向锁时非唯一解
 - 数值不稳定：在万向锁附近，欧拉角剧变
 - 在欧拉角上线性插值不平滑.
 
-== 3. 旋转向量 rotation vector
+== 3. 旋转向量 Rotation Vecto
 
 #im(4, h: 50%)
 
-旋转向量 $vec(a_x, a_y, a_z)$，其方向表示旋转轴，长度表示旋转角度 $theta$.
+旋转向量 $vec(a_x, a_y, a_z)$，其方向表示旋转轴 $hat(omega)$，长度表示旋转角度 $theta$.
 
-- 缺点: 角度在接近 $pi$ 时不连续
+- 优点：变量最少.
+- 缺点：角度在接近 $pi$ 时不连续
 - 有的工作使用旋转向量表示 EEF delta rotation. 据他们说是因为这个 delta action 的旋转角一般较小.
 
 #pagebreak()
 
-通过罗德里格斯公式（Rodrigues' rotation formula）直接转换为旋转矩阵：
+旋转向量可通过罗德里格斯公式（Rodrigues' rotation formula）直接转换为旋转矩阵：
 
-#im(5, h: 14%)
+$ "Rot"(hat(omega), theta) = e^([hat(omega)]theta) = I + sin theta [hat(omega)] + (1 - cos theta) [hat(omega)]^2 $
 
-== 4. 单位四元数
+== 4. 四元数 Quaternion
 
 #im(6, h: 35%)
 
-四元数是复数的推广，$q = w + x i + y j + z k$. 其中  i² = j² = k² = ijk = -1. 可记作 $vec(w, x, y, z)$. 而满足 $w^2 + x^2 + y^2 + z^2 = 1$ 的四元数必定对应一个三维旋转. 由旋转向量计算得到：
+四元数是复数的推广，$q = w + x i + y j + z k$. 其中  i² = j² = k² = ijk = -1. 可记作 $vec(w, x, y, z)$. 而满足 $w^2 + x^2 + y^2 + z^2 = 1$ 的单位四元数均对应一个三维旋转. 由旋转向量计算：
 
-$ vec(cos theta / 2, a_x sin theta / 2, a_y sin theta / 2, a_z sin theta / 2) $
+$ "旋转向量" vec(a_x, a_y, a_z) --> "四元数" vec(cos theta / 2, a_x sin theta / 2, a_y sin theta / 2, a_z sin theta / 2) $
 
 - 注意：四元数取负表示的是同一个旋转.
 - 优点：数据存储常用四元数. 它没有奇异性，而且组合旋转可以直接相乘. $q = q_1 q_2$. 插值方便，可以直接 $q_"itp" = (1 - t)q_x + t q_y$
@@ -282,12 +304,13 @@ $ vec(cos theta / 2, a_x sin theta / 2, a_y sin theta / 2, a_z sin theta / 2) $
 
 #im(7, h: 40%)
 
-- 6d vec 就是旋转矩阵的前两列.
-- 但 6d vec 允许两列不单位正交，不正交的情况下，投影得到正交的第二轴，cross 得到第三轴，避免万向锁 / $pi$ 跳变 / 四元数取负问题. 连续性比较好.
+- 6d vec 就是旋转矩阵的前两列去掉单位正交约束，不是一种标准旋转表示.
+- 不正交的情况下，投影得到正交的第二轴，cross 得到第三轴.
+- 优点：完全连续，可以避免万向锁 / $pi$ 跳变 / 四元数取负问题，网络学习时梯度非常平滑.
 
-== 相互转换
+== 相机上的变换
 
-本质是取 sin cos 等，不需要记，我们可以用 `scipy` 来做.
+本质是取 sin cos 等，不需要记，比如我们可以用 `scipy` 来做.
 
 ```python
 from scipy.spatial.transform import Rotation as R
@@ -302,20 +325,6 @@ quat   = r.as_quat()       # [x, y, z, w]
 rotvec = r.as_rotvec()     # 方向=轴，模长=角度(rad)
 # 6d vec 非标准形式，需要手写.
 ```
-
-= 镜头
-
-== 镜头
-
-=== 按照焦距分类: 短焦/中焦/长焦
-
-焦距决定了相机适合观察什么距离的物体，短焦一般适合观察近距离物体，长焦一般适合观察远距离物体。
-
-=== 按照视角大小分类
-- 广角 特点：视角大，可观测范围广。但同时会产生较大畸变。
-- 标准 特点：视角小，但产生的畸变也较小。
-
-#im(8, h: 45%)
 
 #im(9, h: 30%)
 
@@ -348,24 +357,11 @@ rotvec = r.as_rotvec()     # 方向=轴，模长=角度(rad)
 
 - SO100: *5-DOF*
 - COBOT Magic (ALOHA): *6-DOF*
-- Flexiv Rizon 4: *7-DOF*
+- Flexiv Rizon 4: *7-DOF*, 额外的自由度可以用于避障或优化最小功率等目标函数
 
-== 运动学表示
+为了描述机器人构型，我们可以使用*齐次变换法、DH 表示法或旋量表示法*. URDF 文件就是一种齐次变换表示法.
 
-=== Joint & Link
-
-#grid(
-  columns: 4,
-  gutter: 2pt,
-  im(11, h: 35%),
-  im(12, h: 40%),
-  im(13, h: 40%),
-  im(14, h: 40%),
-)
- 
-在 URDF 描述文件中，Joint 是不可见的坐标系的描述，而 Link 具有 Mesh 实体. 大部分机械臂都是由若干旋转关节构成的。另外也存在平移关节、万向节、球形关节.
-
-每个 Joint 坐标系的原点和方向都是由厂家预定义的。
+== 齐次变换法
 
 #pagebreak()
 
@@ -373,10 +369,10 @@ URDF 会给出相邻关节之间的零位变换 `<origin>` 和旋转轴 `<axis>`
 
 ```xml
 <robot name="rizon4">
-    <joint name="joint1" type="revolute"> <!-- 关节类型为旋转 -->
+    <joint name="joint1" type="revolute">  <!-- 关节类型为旋转 -->
         <parent link="base_link"/> <child link="link1"/>
         <origin rpy="0.0 0.0 -3.141592653589793" xyz="0.0 0.0 0.155"/>
-        <axis xyz="0 0 1"/> <!-- 旋转轴在自己 origin 坐标系下描述 -->
+        <axis xyz="0 0 1"/>  <!-- 旋转轴在自己 origin 坐标系下描述 -->
         <limit effort="123" lower="-2.7925" upper="2.7925" velocity="2.0944"/>
     </joint>
     <link name="link6">
@@ -414,35 +410,24 @@ ROS2 等运动学库可以直接解析 URDF 文件。为了减少参数量，我
 #grid(
   columns: auto,
   image("assets/image-2.png", height: 80%),
-  text[对于给定构型，直接规定坐标系原点和三轴朝向，例如规定 X 轴必须沿相邻两关节轴线的公垂线，原点必须位于公垂线和轴线的交点. 每个旋转型关节由 $alpha, a, theta, d$ 参数化，平移关节则需要另定参数.]
+  text[DH 表示法规定关节坐标系原点和朝向，如 X 轴必须沿相邻两关节轴线的公垂线，原点必须位于公垂线和轴线的交点. 好处：每个关节只需 4 个参数 $alpha, a, theta, d$ 就表示了 6 个自由度的内容。缺点：需要好好的设置坐标系才可以，连 URDF 也不会遵循此规定.]
 )
 
-== 旋量表示法
+== 旋量指数积 (PoE) 法
 
 DH 法需要为每个关节都规定坐标系，而旋量表示法只需要定义一个固定的基坐标系 {0} 和末端坐标系 {T}，中间所有关节只需要确定它们的旋转轴方向和轴线上任意一点.
 
-=== 1. 初始状态
+1. 把机械臂拉到零位（$q=bold(0)$），记录此时末端相对于基的表示 $M∈"SE"(3)$.
+2. 取第 i 个关节轴在基坐标系中的度量 $omega_i$.
+3. 计算由旋转引起的线速度分量 $v_i = -omega_i times q_i$，其中 $q_i$ 为该旋转轴任意一点在基坐标系中的坐标，螺旋轴 $S_i = vec(bold(omega)_i, bold(v)_i) in RR^6$.
+4. 计算转动 $theta_i$ 产生的空间变换矩阵，其为矩阵指数形式：
 
-把机器人所有关节角度都设为 0（即 $q=[0,0,0,0]^T$）。
+$ e^([S]_i theta_i) = exp(mat([omega_i], v_i; 0, 0)theta_i) in "SE"(3) $
 
-计算或测量此时末端坐标系 {T} 相对于基坐标系 {0} 的初始位姿矩阵，记作 $M∈"SE"(3)$
-
-=== 2. 单个关节转动
-
-当第 i 个关节转动角度 $theta_i$ 时，它会带动后方的所有连杆绕着它的旋转轴进行空间旋转。我们用旋量 $S_i$ 描述：$S_i = vec(bold(omega)_i, bold(v)_i)$.
-
-其中 $omega_i$ 为零位下第 i 个关节旋转轴在基坐标系 {0} 中的单位方向向量. 取 $q_i$ 为该旋转轴任意一点在 {0} 中的坐标，$v_i = -omega_i times q_i$ 为由旋转引起的线速度分量. 
-
-#pagebreak()
-
-转动 $theta_i$ 产生的空间变换矩阵为矩阵指数：
-
-$ e^(hat(S)_i theta_i) = exp(mat(hat(omega_i), v_i; 0, 0)theta_i) in "SE"(3) $
-
-对于旋转关节 $||omega_i|| = 1$，使用罗德里格斯公式. 其中:
+使用罗德里格斯公式:
 
 $
-exp(mat(hat(omega_i), v_i; 0, 0) theta_i)
+exp(mat([omega_i], v_i; 0, 0) theta_i)
 &=
 mat(
   R_i(theta_i), p_i(theta_i);
@@ -451,8 +436,8 @@ mat(
 
 R_i(theta_i)
 &=
-I + sin(theta_i) hat(omega_i)
-  + (1 - cos(theta_i)) hat(omega_i)^2 \
+I + sin(theta_i) [omega_i]
+  + (1 - cos(theta_i)) [omega_i]^2 \
 
 p_i(theta_i)
 &=
@@ -460,51 +445,105 @@ p_i(theta_i)
 + omega_i omega_i^T v_i theta_i \
 $
 
-=== 3. 从末端关节开始依次转动
+5. 近的关节运动会带动远的关节运动。所以只需从远及近运动，$S_i$ 就可以全用基坐标系表示：
 
 $
+#let skew = it => {$[#it]$}
 T(0) &= M\
-T(theta_6) &= e^(hat(S)_6 theta_6) M \
-T(theta_5, theta_6) &= e^(hat(S)_5 theta_5) e^(hat(S)_6 theta_6) M \
+T(theta_6) &= e^(skew(S)_6 theta_6) M \
+T(theta_5, theta_6) &= e^(skew(S)_5 theta_5) e^(skew(S)_6 theta_6) M \
 ... \
-T(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6) &= e^(hat(S)_1 theta_1) e^(hat(S)_2 theta_2) e^(hat(S)_3 theta_3) e^(hat(S)_4 theta_4) e^(hat(S)_5 theta_5) e^(hat(S)_6 theta_6) M \
+T(theta_1, theta_2, theta_3, theta_4, theta_5, theta_6) &= e^(skew(S)_1 theta_1) e^(skew(S)_2 theta_2) e^(skew(S)_3 theta_3) e^(skew(S)_4 theta_4) e^(skew(S)_5 theta_5) e^(skew(S)_6 theta_6) M \
 $
 
-优点：无需规定中间坐标系。
+- 优点：无需规定中间关节的坐标系。
+- PoE 和 DH 表示法的关系：DH 四个参数中有三个常数项，剩下的 $theta$ 项也可以用 PoE 表示，化简得到的还是 PoE 公式.
 
-== 奇异性
+== 机器人雅可比
 
 === 速度和雅可比
 
-如何衡量每个关节的运动速度对位姿变化的影响？i.e. 速度 $dot(x)$ 与关节角速度 $dot(theta)$ 的关系.
+如何衡量每个关节的运动速度对末端位姿变化的影响？i.e. 速度 $dot(x)$ 与关节角速度 $dot(theta)$ 的关系.
 
-$ dot(x) &= (partial f(theta)) / (partial theta) (partial theta(t)) / (partial t) \
-&= J(theta) dot(theta) $
+$ dot(x) = (partial f(theta)) / (partial theta) (partial theta(t)) / (partial t) = J(theta) dot(theta) $
 
-常用运动旋量 twist: $cal(V) = vec(omega, v)$.
+在空间机器人中，通常考虑旋量: $cal(V) = vec(omega, v) = J(theta) dot(theta)$. #footnote[旋量 $cal(V)$ 和螺旋轴 $cal(S)$ 的关系：$cal(V) = cal(S)dot(theta)$. $cal(S)$ 是 $cal(V)$ 的归一化表示，表示旋转方向、平移半径及方向.] 此时雅可比矩阵的第 i 行表示当前位形 (configuration) 下，第 i 关节速度 $dot(theta) = 1$ 而其他关节速度为 0 时末端旋量 $cal(V)$.
 
-从齐次变换或者旋量表示法均可推导空间雅可比.
+=== 从旋量表示法计算雅可比
 
-=== 奇异点
+The $i$th column of $J_s(theta)$ is $J_(s i)(theta) = ["Ad"_(e^([S_1]theta_1) ... e^([S_(i - 1)]theta_(i - 1)))] S_i in RR^6$. 基于 DH 和齐次变换法同样可以计算.
 
-对于 n 自由度的机械臂，$J_s(theta)$ 的秩通常为 $min(n, 6)$（有些构型无法达到）. 当秩小于其最大可能值时，将无法产生特定方向的运动，此点称为奇异点.
+== 奇异性分析
 
-在奇异点附近，为了产生 EEF 的位移，机械臂关节角可能剧变.
+关节数：n=6且满秩，则雅可比矩阵可逆，则容易根据关节角速度求出末端速度。
+
+但是n不是6，或者机器人奇异的时候，雅可比矩阵不可逆。n < 6则机器人不能实现任意的末端速度，n > 6为冗余机器人，n - 6个自由度不能反映到机器人末端。
+
+奇异点指的是雅可比矩阵失去满秩的位形，此时末端在特定方向上失去运动能力。
+
+=== 6 轴机械臂发生运动学奇异的情况
+
+- 2 个旋转关节共轴. 此时 J 有两列相同.
+- 3 个旋转关节轴线平行.
+- 4个旋转关节轴线共点
+- ...
+
+在奇异点附近，为了产生特定的末端位移，IK 机械臂关节角可能剧变（见下面）.
 
 == IK: Inverse Dynamics
 
-给定 EEF 位姿，求解关节角.
+给定末端位姿，求解关节角.
 
-对于特定构型的 6 轴机械臂存在解析解，但是更常用的还是数值解.
+对于特定构型的 6 轴机械臂 IK，一般是有限个解. 如果要得到封闭解，需要满足两个充分条件中的一个：
+
+#grid(
+  columns: 2,
+  gutter: 20pt,
+  [
++ 三个相邻关节轴相交于一点
++ 三个相邻关节轴相互平行],
+  im(19, h: 40%)
+)
+
+
+人手臂是 7 自由度的，同一个手腕位姿通常有无数个解. n < 6 则无解. 这些情况都可以考虑数值解.
+
+== IK 数值解
+
+=== 牛顿拉弗森法
+
+#im(20, h: 60%)
+
+对于 n = 6, $J(theta) in RR^(6 times 6)$:
+
+$ theta^(k+1) = theta^k + J^(-1)(theta_k)(x_d - f(theta^k)) $
+
+在奇异点附近，$||J^(-1)|| -> oo$，即使位姿误差极小，乘上 $J^(-1)$ 也会数值极大. 这意味着关节角发生剧变.
+
+对于 n > 6 的冗余机器人，$J in RR^(6 times n)$, $J^(-1)$ 不存在，可以采用右逆:
+
+$ J^dagger = J^T (J J^T)^(-1) in RR^(n times 6) $
+
+$ J J^dagger = I $:
+
+对于 n < 6 的欠驱动机器人，采用左逆也是可以求一个数值解的:
+
+$ J^dagger = (J^T J)^(-1) J^T in RR^(n times 6) $
+$ J^dagger J = I $ 
+
+#pagebreak()
+
+=== NR 的优化
+
+实践中会采用 CLIK（引入阻尼因子 `damp`） 等方法优化数值稳定性.
 
 ```python
+# CLIK
 while True:
     pinocchio.forwardKinematics(model, data, q)
     iMd = data.oMi[JOINT_ID].actInv(oMdes)
     err = pinocchio.log(iMd).vector  # in joint frame
-    if norm(err) < eps:
-        break
-    if i >= IT_MAX:
+    if norm(err) < eps or i >= IT_MAX:
         break
     J = pinocchio.computeJointJacobian(model, data, q, JOINT_ID)
     J = -np.dot(pinocchio.Jlog6(iMd.inverse()), J)
@@ -513,8 +552,94 @@ while True:
     i += 1
 ```
 
+== IK 优化
+
+#grid(
+columns: 2,
+gutter: 20pt,
+text[我们还可以引入一些优化目标：
+- 同时优化多个关节位姿
+- 关节角变化量
+- 避障
+
+对于各种自由度机械臂都适用. 例如 `pink` 库使用 QP 求解器求解带权重任务的 IK.
+],
+[
+#set text(14pt)
+```python
+from pink.tasks import FrameTask, PostureTask
+tasks = {
+    "base": FrameTask(
+        "base",
+        position_cost=1.0, # [cost] / [m]
+        orientation_cost=1.0, # [cost] / [rad]
+    ),
+    "left_contact": FrameTask(
+        "left_contact",
+        position_cost=[0.1, 0.0, 0.1], 
+        orientation_cost=0.0,
+    ),
+    "right_contact": FrameTask(
+        "right_contact",
+        position_cost=[0.1, 0.0, 0.1],
+        orientation_cost=0.0,
+    ),
+    "posture": PostureTask(
+        cost=1e-3,
+    ),
+}
+```
+]
+)
+
+== Retargetting 问题
+
+考虑灵巧手遥操作，VR 头显可以视觉识别人手的关节角度（以及每个关节的位姿），我们要用这个信息控制灵巧手。
+
+关节映射是不可行的，首先自由度不一定相同，而各个部位的尺寸也有很大差别. 因此目标可以设定为：让灵巧手关节点的位姿和人手对应关键点尽量接近 #footnote[https://robot-tv.github.io, https://do-as-i-do.com/].
+
+#image("assets/image.png", height: 54%)
+
+Retargetting 还应用于全身遥操作#footnote[https://beyondmimic.github.io/]、人形机器人跨形态到非人形机器人，以及 Ego 数据转动作数据#footnote[https://qwen.ai/blog?id=qwen-robotmanip]等问题上，复杂的 retargetting 可使用 RL 方法#footnote[https://github.com/NVlabs/GR00T-WholeBodyControl].
+
 = 轨迹规划
 
 == 插值和滤波
 
-有目标
+给定目标关节角 (e.g. 逆解得到)，如何平滑地运动过去？或者避障？
+
+=== 线性插值
+
+每个关节以指定速度运动到目标关节角.
+
+$a prop τ prop I$
+
+- 常规控制：控制器还会进行插值或轨迹规划，避免巨大加速度.
+
+- 透传控制：直接线性插值可能产生震荡或者烧坏电机，一个好的 PID 能兜底.
+
+=== 带有技巧的插值
+
+- Ruckig: 对于每个关节角，给定 $v_max, a_max, j_max$ 以及目标 $x, v, a$，任意时刻的 $j in {-j, 0, j}$，通过讨论把所有 corner case 包括进去.
+
+- Robotoy: 设定和上述类似，但通过牛顿法解出合适的 $j$.
+
+- 双S曲线插值
+
+=== 更精细的插值
+
+我想要所有关节同时到达目标点.
+
+=== 轨迹规划
+
+== 滤波
+
+原始信号可能存在噪声
+
+- VR 遥操作时，识别到的手腕位姿存在很大噪声.
+- Policy 产生的位姿以及逆解存在的关节角可能震荡.
+
+通过低通滤波可以让这些信号更丝滑.
+
+- 卡尔曼滤波：遇事不决上 Kalman
+- 粒子滤波：在导航中更常见

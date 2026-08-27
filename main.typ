@@ -5,6 +5,7 @@
 #import "@preview/fletcher:0.5.4" as fletcher: node, edge
 #import "@preview/numbly:0.1.0": numbly
 #import "@preview/theorion:0.3.2": *
+#import "@preview/mmdr:0.2.2": mermaid
 #import cosmos.clouds: *
 #show: show-theorion
 
@@ -152,11 +153,19 @@
   gutter: 2pt,
   im(11, h: 35%),
   im(12, h: 40%),
-  im(13, h: 40%),
-  im(14, h: 40%),
 )
  
 机器人关节主要有旋转关节 R，移动关节 P，都只有一个自由度. 稍微不常见的有螺旋关节 H，类似螺丝钉。万向节 U 两个自由度，球铰 S 三个自由度.
+
+#grid(
+  columns: 5,
+  gutter: 1%,
+im(13, h: 33%),
+image("img/u.gif", height: 33%),
+h(15%),
+im(14, h: 33%),
+image("img/s.gif", height: 33%),
+)
 
 == 变换的几何意义
 
@@ -180,7 +189,7 @@ $R = mat(
 
 + $T = mat(R, t; 0, 1)$ 为坐标系 A 到坐标系 B 的变换. (A to B)
 + 某点在 A 下的坐标为 $p$, B 下坐标为 $T p$， (A to B)
-+ A 的原点在 B 下的坐标为 $t$, A 的三个轴在 B 下的表示为 R 的三列向量. (A in B)
++ $t$ 为 A 的原点在 B 下的坐标, $R$ 的三列向量为 A 的三个轴在 B 下的表示. (A in B)
 
 === 注意
 - $T_A^C = T_B^C T_A^B$ （左乘)
@@ -189,7 +198,9 @@ $R = mat(
 
 关节 1 和关节 2 到机器人基坐标系的变换分别为 $T_1$ 和 $T_2$. 那么关节 2 到关节 1 的变换为？
 
-Answer: $2 -> "base" "左乘" "base" -> 1$. 即 $T_2^1 = T_1^(-1) T_2$
+Answer: $2 -> "base" "左乘" "base" -> 1$. 
+
+即 $T_2^1 = T_1^(-1) T_2$
 
 === 例子 2
 
@@ -242,15 +253,15 @@ $R_A^B = mat(
   grid.cell(image("img/Euler2a.gif", height: 50%)),
 )
 
-如上所示#footnote[有些人喜欢 $y$ 朝上，如 Unity，ARKit，有些喜欢 $z$ 朝上，如 ROS, Unreal.]。用绕自身三轴的分别旋转某个角度。用这三个角表示整个旋转, e.g. 先后绕 zxy 轴旋转 $(45 degree, 60 degree, 45 degree)$. 一般绕朝前轴的转角成为 roll，绕竖直轴为 yaw，绕左右轴为 pitch. 因此有时候 xyz 旋转被标记为 rpy.
+如上所示#footnote[有些库坐标系是 $y$ 朝上，如 Unity，ARKit，也有的是 $z$ 朝上，如 ROS, Unreal.]。用绕自身三轴的分别旋转某个角度。用这三个角表示整个旋转, e.g. 先后绕 zxy 轴旋转 $(45 degree, 60 degree, 45 degree)$. 有时候 xyz 旋转被标记为 rpy.
 
 - 优点：对于简单旋转而言，几何上直观
 - 缺点：有万向锁; 对于三轴旋转是最不直观的表示法; 欧拉角表示方法超过 12 种.
-- 常用于表示单轴旋转，例如 Flexiv Elements 的 TCP 设置 UI.
+- 欧拉角常用于表示单轴旋转，例如 Flexiv Elements 的 TCP 设置 UI.
 
 === 内旋 vs 外旋
 
-任何旋转可以表示为 `绕自身轴旋转` 或者 `绕固定轴旋转`，分别叫做内旋和外旋. 内旋用小写字母表示，例如 zxy. 外旋大写,例如 YXZ. 三轴顺序任意，没有统一标准. 另外：
+欧拉角允许表示为 `绕自身轴旋转` 或者 `绕固定轴旋转`，分别叫做内旋和外旋. 内旋用小写字母表示，例如 zxy; 外旋大写, 例如 YXZ. 三轴顺序任意，没有统一标准. 另外：
 
 $
 "intrinsic" "zxy" (a, b, c) = "extrinsic" "YXZ" (c, b, a)
@@ -263,7 +274,7 @@ $
 - 数值不稳定：在万向锁附近，欧拉角剧变. 比如 rpy = (90, 89, 90) 和 rpy = (1, 89, 179) 表示的是十分接近的旋转.
 - 在欧拉角上线性插值不平滑.
 
-#im(23, h: 85%)
+#im(23)
 
 == 3. 旋转向量 Rotation Vector
 
@@ -290,18 +301,18 @@ $ "Rot"(hat(omega), theta) = e^([hat(omega)]theta) = I + sin theta [hat(omega)] 
 $ "旋转向量" vec(a_x, a_y, a_z) --> "四元数" vec(cos theta / 2, hat(omega) sin theta / 2) $
 
 - 注意：四元数取负表示的是同一个旋转.
-- 优点：数据存储常用四元数. 它没有奇异性，而且组合旋转可以直接相乘. $q = q_1 q_2$. 插值方便，可以直接 $q_"itp" = (1 - t)q_x + t q_y$
+- 优点：数据存储常用四元数. 它没有奇异性，而且组合旋转可以直接相乘. $q = q_1 q_2$. 插值方便，可以直接 $q_"itp" = "normalize"((1 - t)q_x + t q_y) $
 - 缺点：顺序没有统一标准，非常坑人. 比如 scipy / ros 默认就需要传入 `x, y, z, w`，而 Eigen 和 Mujoco 是 `w, x, y, z`.
 
 == 5. 6d vec
 
 #im(7, h: 40%)
 
-- 6d vec #footnote[https://arxiv.org/abs/1906.02783v3] 就是旋转矩阵的前两列. 与此同时，我们希望它六维中的每一维都可以任意变换，所以我们去掉单位正交约束，它是一种高度不唯一的旋转表示.
+- 6d vec $in RR^6$ 就是旋转矩阵的前两列. 与此同时，我们希望它每一维都可以任意变换，所以我们去掉单位正交约束.
 - 不正交的情况下，投影得到正交的第二轴，cross 得到第三轴.
-- 优点：完全连续，可以避免万向锁 / $pi$ 跳变 / 四元数取负问题，网络学习时梯度非常平滑.
+- 优点：完全连续，可以避免万向锁 / $pi$ 跳变 / 四元数取负问题，网络学习时梯度会比较平滑.
 
-== 相机上的变换
+== scipy
 
 本质是取 sin cos 等，不需要记，比如我们可以用 `scipy` 来做.
 
@@ -319,15 +330,23 @@ rotvec = r.as_rotvec()     # 方向=轴，模长=角度(rad)
 # 6d vec 非标准形式，需要手写.
 ```
 
-#pagebreak()
+== 相机上的成像变换
 
 #grid(
   columns: 2,
   align: center + horizon,
-  $Z_c dot$, im(9, h: 30%),
+  $Z_c dot$, im(9, h: 24%),
 )
 
-#im(10, h: 60%)
+#grid(
+  columns: 2,
+  align: horizon,
+  im(10, h: 42%),
+[
+- 内参可通过*内参标定*获得.
+- 外参是一个复合变换，如下图中就包含 $"标定板" -->^"放置位置" "基座" -->^"关节角" "EEF" -->^"相机安装方式" "相机"  $. 其中 EEF -> 相机常常需要通过*手眼标定*获得. #im(25, h: 35%)
+]
+)
 
 == 手眼标定
 
@@ -355,12 +374,12 @@ rotvec = r.as_rotvec()     # 方向=轴，模长=角度(rad)
 )
 
 - SO100: *5-DOF*
-- COBOT Magic (ALOHA): *6-DOF*
+- COBOT Magic (ALOHA): *6-DOF*，和末端位姿自由度一样
 - Flexiv Rizon 4: *7-DOF*, 额外的自由度可以用于避障或优化最小功率等目标函数
 
 为了描述机器人构型，我们可以使用*齐次变换法、DH 表示法或旋量表示法*. URDF 文件就是一种齐次变换表示法.
 
-== 齐次变换法
+== FK 和齐次变换法
 
 #pagebreak()
 
@@ -383,9 +402,9 @@ URDF 会给出相邻关节之间的零位变换 `<origin>` 和旋转轴 `<axis>`
 
 #pagebreak()
 
-FK: 给定关节角，计算 end effector pose.
+- 最后一个关节常在法兰 (flange) 中心. 其上固定的工具称为 end effector (EEF)#footnote[EEF 坐标系可以在工具（如夹爪）上的任意指定点，有时也叫作  Tool Center Point (TCP).].
 
-如果给定了类似 URDF 的零位变换和旋转轴，计算就比较直接.
+- #strong[F]orward #strong[K]inematics: 给定关节角，计算 EEF pose. 如果给定了类似 URDF 的零位变换和旋转轴，计算就比较直接.
 
 ```xml
 <origin rpy="0.0 0.0 -3.141592653589793" xyz="0.0 0.0 0.155"/>
@@ -402,15 +421,16 @@ $
 T_6^0(q) = T_1^0 T_2^1 T_3^2 T_4^3 T_5^4 T_6^5
 $
 
-ROS2 等运动学库可以直接解析 URDF 文件。
+- 各种运动学库可以帮助我们解析 URDF 文件，因此无需手写上述变换.
 
 为了减少参数量，我们还会使用 *DH 表示法*或者*旋量表示法*.
 
 == DH 表示法
 
 #grid(
-  columns: auto,
-  image("assets/image-2.png", height: 80%),
+  columns: 1,
+  gutter: 2%,
+  image("assets/image-2.png", height: 78%),
   text[DH 表示法规定关节坐标系原点和朝向，如 X 轴必须沿相邻两关节轴线的公垂线，原点必须位于公垂线和轴线的交点. 好处：每个关节只需 4 个参数 $alpha, a, theta, d$ 就表示了 6 个自由度的内容。缺点：需要好好的设置坐标系才可以，连 URDF 也不会遵循此规定.]
 )
 
@@ -460,19 +480,21 @@ $
 - 优点：无需规定中间关节的坐标系。
 - PoE 和 DH 表示法的关系：DH 四个参数中有三个常数项，剩下的 $theta$ 项也可以用 PoE 表示，化简得到的还是 PoE 公式.
 
+#im(24, h: 50%)
+
 == 机器人雅可比
 
 === 速度和雅可比
 
-如何衡量每个关节的运动速度对末端位姿 $f(theta)$ 变化的影响？i.e. 速度 $dot(x)$ 与关节角速度 $dot(theta)$ 的关系.
+如何衡量每个关节的运动速度对末端位姿 $f(theta)$ 变化的影响？i.e. 末端速度 $dot(x)$ 与关节角速度向量 $dot(theta) in RR^n$ 的关系.
 
-$ dot(x) = (partial f(theta)) / (partial theta) (partial theta(t)) / (partial t) = J(theta) dot(theta) $
+$ dot(x) = (partial f(theta)) / (partial theta) (partial theta(t)) / (partial t) = J(theta) dot(theta), space J(theta) in RR^(6 times n)  $
 
-在空间机器人中，通常考虑旋量: $cal(V) = vec(omega, v) = J(theta) dot(theta)$. #footnote[旋量 $cal(V)$ 和螺旋轴 $cal(S)$ 的关系：$cal(V) = cal(S)dot(theta)$. $cal(S)$ 是 $cal(V)$ 的归一化表示，表示旋转方向、平移半径及方向.] 此时雅可比矩阵的第 i 行表示当前位形 (configuration) 下，第 i 关节速度 $dot(theta) = 1$ 而其他关节速度为 0 时末端旋量 $cal(V)$.
+空间机器人用旋量衡量末端速度: $cal(V) = vec(omega, v) = J(theta) dot(theta)$. #footnote[旋量 $cal(V)$ 和单个螺旋轴 $cal(S)$ 的关系：$cal(V) = cal(S)dot(theta)$. $cal(S)$ 是 $cal(V)$ 的归一化表示，表示旋转方向、平移半径及方向.] 此时雅可比矩阵的第 i 行表示当前位形 (configuration) 下，第 i 关节速度 $dot(theta) = 1$ 而其他关节速度为 0 时末端旋量 $cal(V)$.
 
 === 从旋量表示法计算雅可比
 
-The $i$th column of $J_s(theta)$ is $J_(s i)(theta) = ["Ad"_(e^([S_1]theta_1) ... e^([S_(i - 1)]theta_(i - 1)))] S_i in RR^6$. 基于 DH 和齐次变换法同样可以计算.
+对于固定坐标系下雅可比 $J_s(theta)$，第 $i$ 列计算方式为 $J_(s i)(theta) = ["Ad"_(e^([S_1]theta_1) ... e^([S_(i - 1)]theta_(i - 1)))] S_i in RR^6$. 基于 DH 和齐次变换法同样可以计算.
 
 == 奇异性分析
 
@@ -486,16 +508,15 @@ The $i$th column of $J_s(theta)$ is $J_(s i)(theta) = ["Ad"_(e^([S_1]theta_1) ..
 
 - 2 个旋转关节共轴. 此时 J 有两列相同.
 - 3 个旋转关节轴线平行.
-- 4个旋转关节轴线共点
 - ...
 
 在奇异点附近，为了产生特定的末端位移，IK 机械臂关节角可能剧变（见下面）.
 
 == IK: Inverse Dynamics
 
-给定末端位姿，求解关节角.
+给定末端位姿，求解关节角. 例如：遥操 VR 给出手腕位姿，要让机器人末端执行; Policy 输出 TCP 位姿.
 
-对于特定构型的 6 轴机械臂 IK，一般是有限个解. 如果要得到封闭解，需要满足两个充分条件中的一个：
+对于特定构型的 6 轴机械臂 IK，一般是有限个解. 如果满足两个充分条件中的一个，还可以得到封闭解：
 
 #grid(
   columns: 2,
@@ -507,7 +528,7 @@ The $i$th column of $J_s(theta)$ is $J_(s i)(theta) = ["Ad"_(e^([S_1]theta_1) ..
 )
 
 
-人手臂是 7 自由度的，同一个手腕位姿通常有无数个解. n < 6 则无解. 这些情况都可以考虑数值解.
+人手臂是 7 自由度的，同一个手腕位姿通常有无数个解. 另外 n < 6 则无解. 这些情况都可以考虑数值解.
 
 == IK 数值解
 
@@ -516,15 +537,15 @@ The $i$th column of $J_s(theta)$ is $J_(s i)(theta) = ["Ad"_(e^([S_1]theta_1) ..
 #grid(
 columns: (1fr, 1.5fr),
 align: horizon,
-[IK 求解的是 $g(theta) = f(theta) - x_d = bold(0)$ 的问题. $x_d$ 是目标位姿. 标量形式如右图.],
+[IK 求解的是 $g(theta) = f(theta) - x_d = bold(0)$ 的问题. $x_d$ 是目标位姿.
+
+右图是标量情况下的经典例子.],
 im(20, h: 70%)
 )
 
 对于 n = 6, $J(theta) in RR^(6 times 6)$:
 
 $ theta^(k+1) = theta^k + J^(-1)(theta_k)(x_d - f(theta^k)) $
-
-在奇异点附近，$||J^(-1)|| -> oo$，即使位姿误差极小，乘上 $J^(-1)$ 也会数值极大. 容易导致不收敛.
 
 对于 n > 6 的冗余机器人，$J in RR^(6 times n)$, $J^(-1)$ 不存在，可以采用右逆替代:
 
@@ -537,11 +558,13 @@ $ J J^dagger = I_6 $
 $ J^dagger = (J^T J)^(-1) J^T in RR^(n times 6) $
 $ J^dagger J = I_n $ 
 
+在奇异点附近，$||J^(-1)|| -> oo$，即使位姿误差极小，乘上 $J^(-1)$ 也会数值极大. 容易不收敛. 下页展示了改进方法.
+
 #pagebreak()
 
-=== NR 的优化
+=== CLIK
 
-实践中会采用 CLIK（引入阻尼因子 `damp`） 等方法改进数值稳定性.
+实践中会采用 CLIK（引入阻尼因子 `damp` 和数值积分） 等方法改进数值稳定性.
 
 ```python
 # CLIK
@@ -610,7 +633,7 @@ Retargetting 还应用于全身遥操作#footnote[https://beyondmimic.github.io/
 
 = 轨迹规划
 
-== 插值和滤波
+== 插值
 
 给定目标关节角 (e.g. IK 得到)，如何平滑地运动过去？或者避障？
 
@@ -681,3 +704,7 @@ Retargetting 还应用于全身遥操作#footnote[https://beyondmimic.github.io/
 
 - 卡尔曼滤波：遇事不决上 Kalman. 相比低通滤波，还可以估计当前速度并消除匀速运动下的固定延迟.
 - 粒子滤波：在状态空间中维护 100\~500 个采样点，并赋置信权重，每步更新用新观测会增删粒子.
+
+== Modern Robotics
+
+https://hades.mech.northwestern.edu/images/7/7f/MR.pdf

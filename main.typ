@@ -232,7 +232,7 @@ $R_A^B = mat(
 
 #grid(
   columns: 2,
-  im(2, h: 70%),
+  im(26),
   text[
     - 性质：正交矩阵. 每行每列都是单位向量. $R R^T = bold(I); R^T = R^(-1)$. 行列式 = 1. （行列式 = -1 则为左手坐标系）
     - R 的第一列就是 $x_A$ 在 $B$ 下的表示.
@@ -312,7 +312,7 @@ $ "旋转向量" vec(a_x, a_y, a_z) --> "四元数" vec(cos theta / 2, hat(omega
 - 不正交的情况下，投影得到正交的第二轴，cross 得到第三轴.
 - 优点：完全连续，可以避免万向锁 / $pi$ 跳变 / 四元数取负问题，网络学习时梯度会比较平滑.
 
-== scipy
+== Code
 
 本质是取 sin cos 等，不需要记，比如我们可以用 `scipy` 来做.
 
@@ -341,7 +341,7 @@ rotvec = r.as_rotvec()     # 方向=轴，模长=角度(rad)
 #grid(
   columns: 2,
   align: horizon,
-  im(10, h: 42%),
+  im(2, h: 63%),
 [
 - 内参可通过*内参标定*获得.
 - 外参是一个复合变换，如下图中就包含 $"标定板" -->^"放置位置" "基座" -->^"关节角" "EEF" -->^"相机安装方式" "相机"  $. 其中 EEF -> 相机常常需要通过*手眼标定*获得. #im(25, h: 35%)
@@ -441,6 +441,9 @@ DH 法需要为每个关节都规定坐标系，而旋量表示法只需要定�
 1. 把机械臂拉到零位（$q=bold(0)$），记录此时末端相对于基的表示 $M∈"SE"(3)$.
 2. 取零位状态下第 i 个关节轴在基坐标系中的方向 $omega_i$.
 3. 计算由旋转引起的线速度分量 $v_i = -omega_i times q_i$，其中 $q_i$ 为该旋转轴任意一点在基坐标系中的坐标，螺旋轴 $S_i = vec(bold(omega)_i, bold(v)_i) in RR^6$.
+
+#im(27, h: 42%)
+
 4. 计算转动 $theta_i$ 产生的 {T} 在 {0} 下的变换，其为矩阵指数形式：
 
 $ e^([S_i] theta_i) = exp(mat([omega_i], v_i; 0, 0)theta_i) in "SE"(3) $
@@ -480,7 +483,7 @@ $
 - 优点：无需规定中间关节的坐标系。
 - PoE 和 DH 表示法的关系：DH 四个参数中有三个常数项，剩下的 $theta$ 项也可以用 PoE 表示，化简得到的还是 PoE 公式.
 
-#im(24, h: 50%)
+#im(24, h: 33%)
 
 == 机器人雅可比
 
@@ -490,7 +493,7 @@ $
 
 $ dot(x) = (partial f(theta)) / (partial theta) (partial theta(t)) / (partial t) = J(theta) dot(theta), space J(theta) in RR^(6 times n)  $
 
-空间机器人用旋量衡量末端速度: $cal(V) = vec(omega, v) = J(theta) dot(theta)$. #footnote[旋量 $cal(V)$ 和单个螺旋轴 $cal(S)$ 的关系：$cal(V) = cal(S)dot(theta)$. $cal(S)$ 是 $cal(V)$ 的归一化表示，表示旋转方向、平移半径及方向.] 此时雅可比矩阵的第 i 行表示当前位形 (configuration) 下，第 i 关节速度 $dot(theta) = 1$ 而其他关节速度为 0 时末端旋量 $cal(V)$.
+空间机器人用旋量衡量末端速度: $cal(V) = vec(omega, v) = J(theta) dot(theta)$. 它的几何含义是所有关节以 $dot(theta)$ 转动时机器人末端的等效旋转轴和旋转引起的平移速度分量. #footnote[旋量 $cal(V)$ 和单个螺旋轴 $cal(S)$ 的关系：$cal(V) = cal(S)dot(theta)$. $cal(S)$ 是 $cal(V)$ 的归一化表示，表示旋转方向、平移半径及方向.] 此时雅可比矩阵的第 i 行表示当前位形（关节角）下，第 i 关节速度 $dot(theta)_i = 1$ 而其他关节速度为 0 时末端旋量 $cal(V)$.
 
 === 从旋量表示法计算雅可比
 
@@ -543,7 +546,7 @@ align: horizon,
 im(20, h: 70%)
 )
 
-对于 n = 6, $J(theta) in RR^(6 times 6)$:
+对于 n = 6, 则会用到 $J(theta) in RR^(6 times 6)$:
 
 $ theta^(k+1) = theta^k + J^(-1)(theta_k)(x_d - f(theta^k)) $
 
